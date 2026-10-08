@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-title" content="作業ツール">
 <title>作業ツール</title>
 <style>
 :root{--red:#dc4852;--yellow:#f4c13a;--teal:#36afbc;--green:#51ac41;--blue:#409edc;--ink:#1f2d3d;--sub:#6b7785;--line:#dde3ea;--bg:#ebf0f6}
@@ -43,7 +45,7 @@ input:focus{outline:2px solid var(--blue);border-color:var(--blue)}
 .save{background:var(--ink);color:white}.cancel{background:#e4e9ef;color:var(--ink);margin-right:8px}
 .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:white;padding:14px 22px;border-radius:8px;font-size:15px;display:none;max-width:90%}
 header h1{white-space:nowrap}
-@media(max-width:700px){.logo{height:28px}.divider{height:30px}.brand{gap:12px}header h1{font-size:18px}header p{display:none}.head-inner{padding:14px 16px 19px}.menu{grid-template-columns:1fr}.row{grid-template-columns:1fr}.container{padding:0 15px}}
+@media(max-width:700px){.logo{height:28px}.divider{height:30px}.brand{gap:12px}header h1{font-size:18px}header p{display:none}.head-inner{padding:14px 16px 19px}.menu{grid-template-columns:1fr;gap:12px}.button{min-height:84px;padding:14px 18px;gap:14px;font-size:18px}.icon{font-size:32px}.container{margin:20px auto}.row{grid-template-columns:1fr}.container{padding:0 15px}}
 </style>
 </head>
 <body>
@@ -72,7 +74,8 @@ header h1{white-space:nowrap}
     <h2>⚙ ランチャー設定</h2>
     <div class="note">
       開きたいWebページのURL（https:// から始まる文字）を「開くURL」欄に貼り付けて、「設定を保存」を押してください。<br>
-      URLは、そのページをChromeで開いたときの上のアドレス欄からコピーできます。
+      URLは、そのページをChromeで開いたときの上のアドレス欄からコピーできます。<br>
+      スマホでは別のページを開きたい場合だけ「スマホ用URL」を入力してください（空欄ならPCと同じページが開きます）。
     </div>
     <div id="settingsRows"></div>
     <div class="actions">
@@ -97,14 +100,25 @@ const DEFAULT_ITEMS = [
   {icon:'📌', name:'コルクボード', desc:'メモなどをPCに転送するクリップボード',
    path:'https://corkboard-share.vercel.app/'},
   {icon:'📷', name:'売場スキャン', desc:'バーコード・JAN数字を読み取ってPCに送る',
-   path:'https://handyscan-to-pc-hiroshi.web.app/admin.html'}
+   path:'https://handyscan-to-pc-hiroshi.web.app/admin.html',
+   mpath:'https://handyscan-to-pc-hiroshi.web.app/scanner.html', mdesc:'バーコードを読み取ってPCに送る'},
+  {icon:'🏷️', name:'プライスカード作成', desc:'プライスカードを作成するツール（未完成）',
+   path:'https://pricecard-hiroshi.web.app'}
 ]
 
 // 保存された設定を読み込む（なければ初期設定）
 function loadItems(){
   try{
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if(Array.isArray(saved) && saved.length) return saved;
+    if(Array.isArray(saved) && saved.length){
+      // 新しく追加されたツールを保存済みの設定にも足す
+      DEFAULT_ITEMS.forEach(d=>{
+        const hit = saved.find(x=>x.path===d.path);
+        if(!hit) saved.push({...d});
+        else if(d.mpath && hit.mpath===undefined){ hit.mpath=d.mpath; hit.mdesc=d.mdesc; }
+      });
+      return saved;
+    }
   }catch(e){}
   return DEFAULT_ITEMS.map(x=>({...x}));
 }
@@ -119,6 +133,11 @@ function saveItems(){
 }
 
 let items = loadItems();
+// スマホ・タブレットで開いているか
+const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+// 開く先（スマホ用URLがあればスマホではそちら）
+function targetUrl(item){ return (IS_MOBILE && item.mpath) ? item.mpath : item.path; }
 const ACCENTS = ['#dc4852','#f4c13a','#36afbc','#51ac41','#409edc'];
 
 const menu = document.getElementById('menu');
@@ -152,10 +171,11 @@ function renderMenu(){
     const label = document.createElement('span');
     label.className = 'label';
     label.textContent = item.name;
-    if(item.desc){
+    const descText = (IS_MOBILE && item.mpath && item.mdesc) ? item.mdesc : item.desc;
+    if(descText){
       const d = document.createElement('span');
       d.className = 'desc';
-      d.textContent = item.desc;
+      d.textContent = descText;
       label.append(d);
     }
     a.append(icon, label);
@@ -165,8 +185,9 @@ function renderMenu(){
         showToast('「' + item.name + '」にはまだ開く先が登録されていません。右上の ⚙ から登録してください。');
         return;
       }
-      if(/^https?:\/\//i.test(item.path)){
-        window.open(item.path, '_blank', 'noopener');
+      const url = targetUrl(item);
+      if(/^https?:\/\//i.test(url)){
+        window.open(url, '_blank', 'noopener');
         return;
       }
       showToast('「' + item.name + '」のURLが正しくありません。https:// から始まるURLを登録してください。');
@@ -201,7 +222,15 @@ document.getElementById('openSettings').addEventListener('click', ()=>{
     pathInput.dataset.index = i; pathInput.dataset.field = 'path';
     r2.append(l2, pathInput);
 
-    box.append(h, r1, r2);
+    const r3 = document.createElement('div'); r3.className = 'row';
+    const l3 = document.createElement('label'); l3.textContent = 'スマホ用URL';
+    const mInput = document.createElement('input');
+    mInput.value = item.mpath || '';
+    mInput.placeholder = '空欄ならPCと同じURL';
+    mInput.dataset.index = i; mInput.dataset.field = 'mpath';
+    r3.append(l3, mInput);
+
+    box.append(h, r1, r2, r3);
     rows.append(box);
   });
   overlay.style.display = 'flex';
@@ -217,6 +246,8 @@ document.getElementById('saveSettings').addEventListener('click', ()=>{
     const i = Number(input.dataset.index);
     if(input.dataset.field === 'name'){
       items[i].name = input.value.trim() || ('ボタン ' + (i+1));
+    }else if(input.dataset.field === 'mpath'){
+      items[i].mpath = cleanPath(input.value);
     }else{
       items[i].path = cleanPath(input.value);
     }
