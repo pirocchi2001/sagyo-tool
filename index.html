@@ -74,6 +74,7 @@ header h1{white-space:nowrap}
     <h2>⚙ ランチャー設定</h2>
     <div class="note">
       開きたいWebページのURL（https:// から始まる文字）を「開くURL」欄に貼り付けて、「設定を保存」を押してください。<br>
+      ボタンの下に出る説明は「説明文」欄で変更できます。<br>
       URLは、そのページをChromeで開いたときの上のアドレス欄からコピーできます。<br>
       スマホでは別のページを開きたい場合だけ「スマホ用URL」を入力してください（空欄ならPCと同じページが開きます）。
     </div>
@@ -232,7 +233,23 @@ document.getElementById('openSettings').addEventListener('click', ()=>{
     mInput.dataset.index = i; mInput.dataset.field = 'mpath';
     r3.append(l3, mInput);
 
-    box.append(h, r1, r2, r3);
+    const r4 = document.createElement('div'); r4.className = 'row';
+    const l4 = document.createElement('label'); l4.textContent = '説明文';
+    const dInput = document.createElement('input');
+    dInput.value = item.desc || '';
+    dInput.placeholder = 'ボタンの下に表示される説明';
+    dInput.dataset.index = i; dInput.dataset.field = 'desc';
+    r4.append(l4, dInput);
+
+    const r5 = document.createElement('div'); r5.className = 'row';
+    const l5 = document.createElement('label'); l5.textContent = 'スマホ用説明文';
+    const mdInput = document.createElement('input');
+    mdInput.value = item.mdesc || '';
+    mdInput.placeholder = '空欄ならPCと同じ説明（スマホ用URLがある場合のみ有効）';
+    mdInput.dataset.index = i; mdInput.dataset.field = 'mdesc';
+    r5.append(l5, mdInput);
+
+    box.append(h, r1, r4, r2, r3, r5);
     rows.append(box);
   });
   overlay.style.display = 'flex';
@@ -248,6 +265,8 @@ document.getElementById('saveSettings').addEventListener('click', ()=>{
     const i = Number(input.dataset.index);
     if(input.dataset.field === 'name'){
       items[i].name = input.value.trim() || ('ボタン ' + (i+1));
+    }else if(input.dataset.field === 'desc' || input.dataset.field === 'mdesc'){
+      items[i][input.dataset.field] = input.value.trim();
     }else if(input.dataset.field === 'mpath'){
       items[i].mpath = cleanPath(input.value);
     }else{
