@@ -99,7 +99,7 @@ const DEFAULT_ITEMS = [
   {icon:'🎍', name:'年賀状価格計算', desc:'マイプリント年賀状価格計算',
    path:'https://nengajo-simulation.nengajo-sim.workers.dev/'},
   {icon:'📌', name:'コルクボード', desc:'メモなどをPCに転送するクリップボード',
-   path:'https://corkboard-share.vercel.app/'},
+   path:'https://hiroshimac-mini.tail387218.ts.net/'},
   {icon:'📷', name:'売場スキャン', desc:'バーコード・JAN数字を読み取ってPCに送る',
    path:'https://handyscan-to-pc-hiroshi.web.app/admin.html',
    mpath:'https://handyscan-to-pc-hiroshi.web.app/scanner.html', mdesc:'バーコードを読み取ってPCに送る'},
@@ -112,11 +112,21 @@ const DEFAULT_ITEMS = [
    mpath:'https://pirocchi2001.github.io/hatsubai-calendar/', mdesc:'発売日・価格をスマホで確認（カード表示・PDF保存）'}
 ]
 
+// 移転したツールのURL（古いURL → 新しいURL）。保存済みの設定にも反映する
+const MOVED_URLS = {
+  'https://corkboard-share.vercel.app/': 'https://hiroshimac-mini.tail387218.ts.net/'
+};
+
 // 保存された設定を読み込む（なければ初期設定）
 function loadItems(){
   try{
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if(Array.isArray(saved) && saved.length){
+      // 移転したツールのURLを書き換える
+      saved.forEach(x=>{
+        if(MOVED_URLS[x.path]) x.path = MOVED_URLS[x.path];
+        if(x.mpath && MOVED_URLS[x.mpath]) x.mpath = MOVED_URLS[x.mpath];
+      });
       // 新しく追加されたツールを保存済みの設定にも足す
       DEFAULT_ITEMS.forEach(d=>{
         const hit = saved.find(x=>x.path===d.path);
