@@ -110,9 +110,14 @@ const DEFAULT_ITEMS = [
   {icon:'📅', name:'新商品発売スケジュール', desc:'玩具・キャラグッズ・文具・ゲームの発売一覧（編集・PDF出力）',
    path:'https://pirocchi2001.github.io/hatsubai-calendar/',
    mpath:'https://pirocchi2001.github.io/hatsubai-calendar/', mdesc:'発売日・価格をスマホで確認（カード表示・PDF保存）'},
-  {icon:'🔍', name:'画像→Excel変換', desc:'スクリーンショットの表を文字認識してExcel・PDFに変換',
+  {icon:'🔍', name:'スクショから文字認識', desc:'スクリーンショットを貼り付けるだけで文字認識。Excel・PDFに変換',
    path:'https://pirocchi2001.github.io/screenshot-ocr/'}
 ]
+
+// 名前を変えたツール（URL → 古い名前の一覧）。保存済みの設定の名前・説明も新しいものに更新する
+const RENAMED_ITEMS = {
+  'https://pirocchi2001.github.io/screenshot-ocr/': ['スクショ表OCR', '画像→Excel変換']
+};
 
 // 移転したツールのURL（古いURL → 新しいURL）。保存済みの設定にも反映する
 const MOVED_URLS = {
@@ -133,6 +138,7 @@ function loadItems(){
       DEFAULT_ITEMS.forEach(d=>{
         const hit = saved.find(x=>x.path===d.path);
         if(!hit) saved.push({...d});
+        else if((RENAMED_ITEMS[d.path]||[]).includes(hit.name)){ hit.name=d.name; hit.desc=d.desc; }
         else if(d.mpath && hit.mpath===undefined){ hit.mpath=d.mpath; hit.mdesc=d.mdesc; }
       });
       return saved;
