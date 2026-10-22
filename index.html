@@ -45,6 +45,10 @@ input:focus{outline:2px solid var(--blue);border-color:var(--blue)}
 .save{background:var(--ink);color:white}.cancel{background:#e4e9ef;color:var(--ink);margin-right:8px}
 .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:white;padding:14px 22px;border-radius:8px;font-size:15px;display:none;max-width:90%}
 header h1{white-space:nowrap}
+.button{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.button.dragging{position:relative;z-index:10;opacity:.9;box-shadow:0 12px 30px rgba(0,0,0,.25);pointer-events:none;transition:none;cursor:grabbing}
+.button.drop-target{outline:3px dashed var(--blue);outline-offset:3px}
+.hint{margin:0 0 14px;font-size:13px;color:var(--sub)}
 @media(max-width:700px){.logo{height:28px}.divider{height:30px}.brand{gap:12px}header h1{font-size:18px}header p{display:none}.head-inner{padding:14px 16px 19px}.menu{grid-template-columns:1fr;gap:12px}.button{min-height:84px;padding:14px 18px;gap:14px;font-size:18px}.icon{font-size:32px}.container{margin:20px auto}.row{grid-template-columns:1fr}.container{padding:0 15px}}
 </style>
 </head>
@@ -65,6 +69,7 @@ header h1{white-space:nowrap}
 </header>
 
 <div class="container">
+  <p class="hint">ボタンをドラッグすると並べ替えできます（スマホは長押ししてから動かします）</p>
   <div class="menu" id="menu"></div>
   <footer>TOYLO PARK 作業ツール</footer>
 </div>
@@ -203,6 +208,9 @@ function renderMenu(){
       label.append(d);
     }
     a.append(icon, label);
+    a.dataset.i = items.indexOf(item);
+    a.draggable = false;
+    a.addEventListener('pointerdown', e=>startPress(e, a));
     a.addEventListener('click', e=>{
       e.preventDefault();
       if(!item.path){
@@ -219,6 +227,70 @@ function renderMenu(){
     menu.append(a);
   });
 }
+
+// ---- ドラッグで並べ替え ----
+// マウスは少し動かすと開始、タッチは長押し（短いタッチ・スクロールは通常どおり）
+let press = null, suppressClick = false;
+function startPress(e, a){
+  if(e.pointerType === 'mouse' && e.button !== 0) return;
+  endPress(true);
+  const touch = e.pointerType !== 'mouse';
+  press = {a, from:Number(a.dataset.i), x:e.clientX, y:e.clientY, cx:e.clientX, cy:e.clientY, sc:window.scrollY, active:false, over:null, touch, timer:null, scroller:null};
+  if(touch) press.timer = setTimeout(beginDrag, 350);
+}
+function beginDrag(){
+  if(!press) return;
+  press.active = true;
+  press.a.classList.add('dragging');
+  if(navigator.vibrate) navigator.vibrate(15);
+  press.scroller = setInterval(()=>{
+    const y = press.cy, edge = 70;
+    if(y < edge) window.scrollBy(0, -14); else if(y > window.innerHeight - edge) window.scrollBy(0, 14);
+    refreshDrag();
+  }, 16);
+}
+function refreshDrag(){
+  const p = press; if(!p || !p.active) return;
+  p.a.style.transform = 'translate(' + (p.cx - p.x) + 'px,' + (p.cy - p.y + window.scrollY - p.sc) + 'px) scale(1.03)';
+  const hit = document.elementsFromPoint(p.cx, p.cy).find(n=>n.classList && n.classList.contains('button') && n !== p.a);
+  if(hit !== p.over){
+    if(p.over) p.over.classList.remove('drop-target');
+    if(hit) hit.classList.add('drop-target');
+    p.over = hit || null;
+  }
+}
+function endPress(cancel){
+  const p = press; if(!p) return;
+  press = null;
+  clearTimeout(p.timer); clearInterval(p.scroller);
+  if(!p.active) return;
+  suppressClick = true; setTimeout(()=>suppressClick=false, 50);
+  p.a.classList.remove('dragging'); p.a.style.transform = '';
+  if(p.over) p.over.classList.remove('drop-target');
+  if(cancel || !p.over) return;
+  const to = Number(p.over.dataset.i);
+  if(to === p.from) return;
+  items.splice(to, 0, items.splice(p.from, 1)[0]);
+  renderMenu();
+  showToast(saveItems() ? '並べ替えを保存しました' : '並べ替えを保存できませんでした（画面を閉じると元に戻ります）');
+}
+window.addEventListener('pointermove', e=>{
+  if(!press) return;
+  press.cx = e.clientX; press.cy = e.clientY;
+  if(!press.active){
+    const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y);
+    if(press.touch){ if(moved > 8) endPress(true); }   // 長押しの前に動いたらスクロール扱い
+    else if(moved > 6) beginDrag();
+  }
+  refreshDrag();
+});
+window.addEventListener('pointerup', ()=>endPress(false));
+window.addEventListener('pointercancel', ()=>endPress(true));
+// ドラッグ中は画面がスクロールしないようにする（タッチ）
+document.addEventListener('touchmove', e=>{ if(press && press.active) e.preventDefault(); }, {passive:false});
+document.addEventListener('contextmenu', e=>{ if(press && press.touch) e.preventDefault(); });
+// ドラッグ直後のクリックでツールが開かないようにする
+document.addEventListener('click', e=>{ if(suppressClick){ e.preventDefault(); e.stopPropagation(); } }, true);
 
 // 設定画面を開く
 document.getElementById('openSettings').addEventListener('click', ()=>{
