@@ -28,6 +28,7 @@ header p{margin:3px 0 0;font-size:14px;color:var(--sub)}
 .button.unset{color:#999}
 .button.unset::after{content:"未登録";position:absolute;right:16px;bottom:10px;font-size:12px;font-weight:normal;color:#b45309}
 .icon{font-size:38px;line-height:1}
+.icon.tag{width:42px;height:42px;flex-shrink:0;border-radius:50%;background:#f00;color:#fff;font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center;outline:1.5px dashed #b8c0c9;outline-offset:2px;margin:0 3px}
 .label{display:flex;flex-direction:column;text-align:left}
 .desc{font-size:13px;font-weight:normal;color:var(--sub);margin-top:5px}
 footer{text-align:center;color:var(--sub);margin-top:40px;font-size:13px}
@@ -120,7 +121,7 @@ const DEFAULT_ITEMS = [
   {icon:'🛍️', name:'処分品セット レジ指示カード', desc:'袋詰めした処分品のレジ操作カード（JANバーコード付き）をA4で印刷',
    path:'https://pirocchi2001.github.io/okaidoku-pack-jan/',
    mpath:'https://pirocchi2001.github.io/okaidoku-pack-jan/scan.html', mdesc:'商品のJANをカメラで読んでPCに送る（Mac経由）'},
-  {icon:'🔢', name:'番号札作成', desc:'丸い番号札をA4に並べて印刷・画像保存（範囲／飛び番・枚数指定）',
+  {icon:'TAG:12', name:'番号札作成', desc:'丸い番号札をA4に並べて印刷・画像保存（範囲／飛び番・枚数指定）',
    path:'https://pirocchi2001.github.io/numbertag/'},
   {icon:'🎨', name:'POP作成（29.7×90cm）', desc:'縦長・横長のPOPを作成。画像配置・トリミング・文字ワープ・高解像度JPEG保存',
    path:'https://pirocchi2001.github.io/pop-designer/'}
@@ -130,6 +131,13 @@ const DEFAULT_ITEMS = [
 const RENAMED_ITEMS = {
   'https://pirocchi2001.github.io/screenshot-ocr/': ['スクショ表OCR', '画像→Excel変換']
 };
+
+// アイコンを変えたツール（URL → 古いアイコンの一覧）。保存済みの設定のアイコンも新しいものに更新する
+const ICON_UPDATES = {
+  'https://pirocchi2001.github.io/numbertag/': ['🔢']
+};
+// 「TAG:12」は赤い丸に数字の番号札アイコン。画面の文字では 🔴 にする
+const iconText = icon => /^TAG:/.test(icon) ? '🔴' : icon;
 
 // 移転したツールのURL（古いURL → 新しいURL）。保存済みの設定にも反映する
 const MOVED_URLS = {
@@ -151,6 +159,7 @@ function loadItems(){
         const hit = saved.find(x=>x.path===d.path);
         if(!hit) saved.push({...d});
         else if((RENAMED_ITEMS[d.path]||[]).includes(hit.name)){ hit.name=d.name; hit.desc=d.desc; }
+        else if((ICON_UPDATES[d.path]||[]).includes(hit.icon)) hit.icon=d.icon;
         else if(d.mpath && hit.mpath===undefined){ hit.mpath=d.mpath; hit.mdesc=d.mdesc; }
       });
       return saved;
@@ -203,7 +212,8 @@ function renderMenu(){
     a.href = '#';
     const icon = document.createElement('span');
     icon.className = 'icon';
-    icon.textContent = item.icon;
+    if(/^TAG:/.test(item.icon)){ icon.classList.add('tag'); icon.textContent = item.icon.slice(4); }
+    else icon.textContent = item.icon;
     const label = document.createElement('span');
     label.className = 'label';
     label.textContent = item.name;
@@ -308,7 +318,7 @@ document.getElementById('openSettings').addEventListener('click', ()=>{
     box.className = 'item';
 
     const h = document.createElement('h3');
-    h.textContent = (marks[i] || (i+1)+'.') + ' ' + item.icon + ' ' + item.name;
+    h.textContent = (marks[i] || (i+1)+'.') + ' ' + iconText(item.icon) + ' ' + item.name;
 
     const r1 = document.createElement('div'); r1.className = 'row';
     const l1 = document.createElement('label'); l1.textContent = '表示名';
