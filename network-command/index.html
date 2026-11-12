@@ -28,6 +28,17 @@ h1{font:30px/1 KJ,Orbitron,sans-serif;letter-spacing:8px;margin:0;color:var(--cy
 .header-right{display:flex;align-items:center;gap:18px}
 .clock{font:600 18px Orbitron;color:var(--cyan);letter-spacing:2px;text-shadow:0 0 10px color-mix(in srgb,var(--cyan) 50%,transparent)}
 .clock small{display:block;font:9px 'Share Tech Mono';color:var(--muted);letter-spacing:1.5px;text-align:right;text-shadow:none}
+.wx{display:flex;gap:6px;align-items:stretch}
+.wx-d{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;column-gap:6px;align-items:center;padding:3px 9px 3px 7px;border:1px solid var(--line);background:linear-gradient(135deg,rgba(83,234,255,.07),rgba(3,10,19,.4));clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px));min-width:96px}
+.wx-d.today{border-color:color-mix(in srgb,var(--cyan) 55%,transparent);box-shadow:inset 0 0 12px color-mix(in srgb,var(--cyan) 14%,transparent)}
+.wx-d .lb{grid-column:1/3;font-size:8px;letter-spacing:1.5px;color:var(--muted);line-height:1.2;white-space:nowrap}.wx-d.today .lb{color:var(--cyan)}
+.wx-d svg{width:24px;height:24px;stroke:var(--cyan);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px var(--cyan));grid-row:2}
+.wx-d .tp{font:600 11px Orbitron;line-height:1.25;letter-spacing:.5px;white-space:nowrap}
+.wx-d .tp .hi{color:var(--amber);text-shadow:0 0 6px color-mix(in srgb,var(--amber) 50%,transparent)}.wx-d .tp .lo{color:var(--cyan);display:block;font-size:10px}
+.wx-d .pp{grid-column:1/3;font-size:8px;color:var(--mint);letter-spacing:1px;line-height:1.2}
+.wx.err .wx-d{opacity:.45}
+@media(max-width:1500px){.wx-d .pp{display:none}}
+@media(max-width:640px){.wx{display:none}}
 .online{font-size:10px;color:var(--mint);letter-spacing:1px;white-space:nowrap}
 .led{display:inline-block;width:7px;height:7px;background:var(--mint);border-radius:50%;box-shadow:0 0 9px var(--mint);margin-right:7px;animation:blink 1.5s infinite}@keyframes blink{50%{opacity:.25}}
 button{font:10px 'Share Tech Mono';letter-spacing:1px;color:var(--cyan);background:#071a29;border:1px solid #246078;padding:7px 11px;cursor:pointer;transition:.2s}
@@ -269,7 +280,7 @@ body.redalert .panel:before,body.redalert header:before{background:var(--red);bo
   <div class="hm-opt">GLOBAL THROUGHPUT<b id="hThru">1.84 Tb/s</b></div>
   <div class="hm-opt">THREATS BLOCKED<b id="hBlocked">0</b></div>
  </div>
- <div class="header-right"><div class="online"><i class="led"></i>NETWORK ONLINE</div><div class="clock"><span id="clock">00:00:00</span><small id="utc">UTC 00:00:00</small></div><button id="settingsBtn">CONFIG ⚙</button></div>
+ <div class="header-right"><div class="wx" id="wx"></div><div class="online"><i class="led"></i>NETWORK ONLINE</div><div class="clock"><span id="clock">00:00:00</span><small id="utc">UTC 00:00:00</small></div><button id="settingsBtn">CONFIG ⚙</button></div>
 </header>
 <main>
 <section class="panel left-top">
@@ -1063,4 +1074,37 @@ document.addEventListener('visibilitychange',acquire);
 ['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,acquire));
 acquire();
 })();
-</script></body></html>
+</script><script>
+// 天気予報（Open-Meteo / 鴨居周辺 / 3日分）
+(()=>{
+const LAT=35.512,LON=139.545,KEY='nexusWxCache';
+const P={sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+cloud:'<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7Z"/>',
+part:'<circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M1.5 8H3M3.4 3.4l1 1M12.6 3.4l-1 1"/><path d="M9 20h8a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 8 14.5 2.8 2.8 0 0 0 9 20Z"/>',
+rain:'<path d="M7 15h10a3.5 3.5 0 0 0 .5-7A5.5 5.5 0 0 0 6.5 9.5 2.8 2.8 0 0 0 7 15Z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+snow:'<path d="M7 14h10a3.5 3.5 0 0 0 .5-7A5.5 5.5 0 0 0 6.5 8.5 2.8 2.8 0 0 0 7 14Z"/><path d="M8 18h.01M12 20h.01M16 18h.01M10 22h.01M14 22h.01"/>',
+storm:'<path d="M7 14h10a3.5 3.5 0 0 0 .5-7A5.5 5.5 0 0 0 6.5 8.5 2.8 2.8 0 0 0 7 14Z"/><path d="M12.5 14l-2.5 4h3l-2 4"/>'};
+function icon(c){let k='cloud';
+ if(c===0||c===1)k='sun';else if(c===2)k='part';else if(c>=95)k='storm';
+ else if((c>=51&&c<=67)||(c>=80&&c<=82))k='rain';else if((c>=71&&c<=77)||c===85||c===86)k='snow';
+ return '<svg viewBox="0 0 24 24">'+P[k]+'</svg>'}
+const DOW=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+function render(d,err){
+ const el=document.getElementById('wx');if(!el||!d)return;
+ el.classList.toggle('err',!!err);
+ el.innerHTML=d.time.map((t,i)=>{const dt=new Date(t+'T00:00:00');
+  const lb=(i===0?'TODAY ':'')+(dt.getMonth()+1)+'/'+dt.getDate()+' '+DOW[dt.getDay()];
+  return '<div class="wx-d'+(i===0?' today':'')+'" title="鴨居周辺の天気予報"><div class="lb">'+lb+'</div>'+icon(d.weather_code[i])+
+   '<div class="tp"><span class="hi">'+Math.round(d.temperature_2m_max[i])+'°</span><span class="lo">'+Math.round(d.temperature_2m_min[i])+'°</span></div>'+
+   '<div class="pp">PRECIP '+(d.precipitation_probability_max[i]??'--')+'%</div></div>'}).join('')}
+async function load(){
+ try{
+  const u='https://api.open-meteo.com/v1/forecast?latitude='+LAT+'&longitude='+LON+'&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FTokyo&forecast_days=3';
+  const r=await fetch(u);if(!r.ok)throw 0;const j=await r.json();
+  render(j.daily);try{localStorage.setItem(KEY,JSON.stringify(j.daily))}catch(e){}
+ }catch(e){try{render(JSON.parse(localStorage.getItem(KEY)),true)}catch(_){}}
+}
+load();setInterval(load,3600000);
+})();
+</script>
+</body></html>
