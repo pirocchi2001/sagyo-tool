@@ -1051,4 +1051,16 @@ layoutAll();requestAnimationFrame(drawMap);requestAnimationFrame(drawGlobe);requ
 (()=>{const lines=['NEXUS BIOS v3.0.0 ............ OK','Loading geospatial dataset ...... '+LAND.length+' coastline rings','Rasterizing land matrix ......... '+mapDots.length+' cells','Registering hubs ................ '+hubCount,'Spawning edge relays ............ '+(nodes.length-hubCount),'Computing great-circle routes ... '+routes.length,'Solar ephemeris locked .......... OK','COMMAND LINK ESTABLISHED'];
  const box=$('#bootLines'),bar=$('#bootBar'),boot=$('#boot');let i=0;const done=()=>{if(boot.classList.contains('hide'))return;boot.classList.add('hide');setTimeout(()=>boot.remove(),700);$$('header,.panel,footer').forEach((p,i)=>{p.style.animationDelay=(80+i*75)+'ms';p.classList.add('materialize');setTimeout(()=>p.classList.remove('materialize'),1400+i*75)})};boot.onclick=done;
  const step=()=>{if(i<lines.length){const d=document.createElement('div');d.textContent='> '+lines[i++];box.appendChild(d);box.scrollTop=1e9;bar.style.width=(i/lines.length*100)+'%';setTimeout(step,170)}else setTimeout(done,350)};step()})();
+</script>
+<script>
+// 画面表示中はPCのスクリーンセイバー・スリープを抑止（Screen Wake Lock API）
+(()=>{let lock=null;
+async function acquire(){
+  if(!('wakeLock' in navigator)||lock||document.visibilityState!=='visible')return;
+  try{lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>{lock=null})}catch(e){}
+}
+document.addEventListener('visibilitychange',acquire);
+['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,acquire));
+acquire();
+})();
 </script></body></html>
